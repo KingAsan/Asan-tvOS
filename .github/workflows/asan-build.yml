@@ -36,7 +36,7 @@ jobs:
           parts = sorted(pathlib.Path('.transfer').glob('Asan-source.part-*.b64'))
           assert len(parts) == 6, 'Missing source transport part'
           archive = base64.b64decode(''.join(p.read_text().strip() for p in parts), validate=True)
-          assert hashlib.sha256(archive).hexdigest() == '7b751e87c2f7e3c7d1a6f6c60f2f022b077791895df8ce9f561fa42b281515b8', 'Source digest mismatch'
+          assert hashlib.sha256(archive).hexdigest() == '7963441b54f66f60c4e445575dcdc8969f4493a2b2bb57a774848c23b181b5e5', 'Source digest mismatch'
           target = pathlib.Path('project').resolve()
           target.mkdir(exist_ok=False)
           with zipfile.ZipFile(io.BytesIO(archive)) as package:
@@ -46,7 +46,7 @@ jobs:
                   assert dest.is_relative_to(target), 'Unsafe archive path'
                   assert not stat.S_ISLNK(entry.external_attr >> 16), 'Symlink in source archive'
               package.extractall(target)
-          print('Restored source SHA256 7b751e87c2f7e3c7d1a6f6c60f2f022b077791895df8ce9f561fa42b281515b8')
+          print('Restored source SHA256 7963441b54f66f60c4e445575dcdc8969f4493a2b2bb57a774848c23b181b5e5')
           PY
 
       - name: Test core and build tvOS simulator app
@@ -116,7 +116,7 @@ jobs:
           parts = sorted(pathlib.Path('.transfer').glob('Asan-source.part-*.b64'))
           assert len(parts) == 6, 'Missing source transport part'
           archive = base64.b64decode(''.join(p.read_text().strip() for p in parts), validate=True)
-          assert hashlib.sha256(archive).hexdigest() == '7b751e87c2f7e3c7d1a6f6c60f2f022b077791895df8ce9f561fa42b281515b8', 'Source digest mismatch'
+          assert hashlib.sha256(archive).hexdigest() == '7963441b54f66f60c4e445575dcdc8969f4493a2b2bb57a774848c23b181b5e5', 'Source digest mismatch'
           target = pathlib.Path('project').resolve()
           target.mkdir(exist_ok=False)
           with zipfile.ZipFile(io.BytesIO(archive)) as package:
@@ -126,7 +126,7 @@ jobs:
                   assert dest.is_relative_to(target), 'Unsafe archive path'
                   assert not stat.S_ISLNK(entry.external_attr >> 16), 'Symlink in source archive'
               package.extractall(target)
-          print('Restored source SHA256 7b751e87c2f7e3c7d1a6f6c60f2f022b077791895df8ce9f561fa42b281515b8')
+          print('Restored source SHA256 7963441b54f66f60c4e445575dcdc8969f4493a2b2bb57a774848c23b181b5e5')
           PY
 
       - name: Check Simulator selection
