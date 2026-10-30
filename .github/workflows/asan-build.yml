@@ -1,0 +1,150 @@
+name: Asan tvOS build and native UI verification
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.transfer/**'
+      - '.github/workflows/asan-build.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: asan-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-26-intel
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+        working-directory: project
+    steps:
+      - name: Check out sources
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Restore reviewed project and verify source digest
+        working-directory: .
+        run: |
+          python3 - <<'PY'
+          import base64, hashlib, io, pathlib, stat, zipfile
+          parts = sorted(pathlib.Path('.transfer').glob('Asan-source.part-*.b64'))
+          assert len(parts) == 6, 'Missing source transport part'
+          archive = base64.b64decode(''.join(p.read_text().strip() for p in parts), validate=True)
+          assert hashlib.sha256(archive).hexdigest() == '4c9c87bcdaab5fa5c510b17dc068103c2319e4abfa175b320458460634b706de', 'Source digest mismatch'
+          target = pathlib.Path('project').resolve()
+          target.mkdir(exist_ok=False)
+          with zipfile.ZipFile(io.BytesIO(archive)) as package:
+              assert package.testzip() is None
+              for entry in package.infolist():
+                  dest = (target / entry.filename).resolve()
+                  assert dest.is_relative_to(target), 'Unsafe archive path'
+                  assert not stat.S_ISLNK(entry.external_attr >> 16), 'Symlink in source archive'
+              package.extractall(target)
+          print('Restored source SHA256 4c9c87bcdaab5fa5c510b17dc068103c2319e4abfa175b320458460634b706de')
+          PY
+
+      - name: Test core and build tvOS simulator app
+        run: |
+          mkdir -p artifacts
+          python3 -m unittest discover -s scripts/tests -p 'test_*.py' -v 2>&1 | tee artifacts/packaging-tests.log
+          bash scripts/check-macos.sh 2>&1 | tee artifacts/check-macos.log
+
+      - name: Archive unsigned tvOS device app
+        run: |
+          xcodebuild archive \
+            -project KinoHD.xcodeproj \
+            -scheme KinoHD \
+            -configuration Release \
+            -sdk appletvos \
+            -destination 'generic/platform=tvOS' \
+            -archivePath .build/KinoHD.xcarchive \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY= \
+            2>&1 | tee artifacts/device-archive.log
+
+      - name: Keep unsigned device archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: KinoHD-unsigned-tvOS
+          path: project/.build/KinoHD.xcarchive
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Package unsigned tvOS IPA for local signing
+        run: python3 scripts/package-unsigned-ipa.py 2>&1 | tee artifacts/package-ipa.log
+
+      - name: Keep unsigned IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: KinoHD-unsigned-IPA
+          path: project/artifacts/KinoHD-unsigned.ipa
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Keep build diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: KinoHD-check-log-${{ github.run_attempt }}
+          path: project/artifacts/*.log
+          if-no-files-found: warn
+          retention-days: 14
+
+  native-ui:
+    runs-on: macos-26-intel
+    timeout-minutes: 40
+    defaults:
+      run:
+        shell: bash
+        working-directory: project
+    steps:
+      - name: Check out sources
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Restore reviewed project and verify source digest
+        working-directory: .
+        run: |
+          python3 - <<'PY'
+          import base64, hashlib, io, pathlib, stat, zipfile
+          parts = sorted(pathlib.Path('.transfer').glob('Asan-source.part-*.b64'))
+          assert len(parts) == 6, 'Missing source transport part'
+          archive = base64.b64decode(''.join(p.read_text().strip() for p in parts), validate=True)
+          assert hashlib.sha256(archive).hexdigest() == '4c9c87bcdaab5fa5c510b17dc068103c2319e4abfa175b320458460634b706de', 'Source digest mismatch'
+          target = pathlib.Path('project').resolve()
+          target.mkdir(exist_ok=False)
+          with zipfile.ZipFile(io.BytesIO(archive)) as package:
+              assert package.testzip() is None
+              for entry in package.infolist():
+                  dest = (target / entry.filename).resolve()
+                  assert dest.is_relative_to(target), 'Unsafe archive path'
+                  assert not stat.S_ISLNK(entry.external_attr >> 16), 'Symlink in source archive'
+              package.extractall(target)
+          print('Restored source SHA256 4c9c87bcdaab5fa5c510b17dc068103c2319e4abfa175b320458460634b706de')
+          PY
+
+      - name: Check Simulator selection
+        run: python3 -m unittest discover -s scripts/tests -p 'test_capture_tvos_preview.py' -v
+
+      - name: Run remote UI tests and capture native scenes
+        run: |
+          mkdir -p artifacts/preview
+          python3 scripts/capture-tvos-preview.py 2>&1 | tee artifacts/preview-capture.log
+
+      - name: Keep native preview and diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: KinoHD-native-preview
+          path: |
+            project/artifacts/preview/
+            project/artifacts/preview-capture.log
+            project/.build/Asan-UI.xcresult
+          if-no-files-found: warn
+          retention-days: 14
