@@ -36,7 +36,7 @@ jobs:
           parts = sorted(pathlib.Path('.transfer').glob('Asan-source.part-*.b64'))
           assert len(parts) == 6, 'Missing source transport part'
           archive = base64.b64decode(''.join(p.read_text().strip() for p in parts), validate=True)
-          assert hashlib.sha256(archive).hexdigest() == '4c9c87bcdaab5fa5c510b17dc068103c2319e4abfa175b320458460634b706de', 'Source digest mismatch'
+          assert hashlib.sha256(archive).hexdigest() == '08e80089062f0ed1451f68523041bcd9d9235e1a207e474921f9f5d4db3c193f', 'Source digest mismatch'
           target = pathlib.Path('project').resolve()
           target.mkdir(exist_ok=False)
           with zipfile.ZipFile(io.BytesIO(archive)) as package:
@@ -46,7 +46,7 @@ jobs:
                   assert dest.is_relative_to(target), 'Unsafe archive path'
                   assert not stat.S_ISLNK(entry.external_attr >> 16), 'Symlink in source archive'
               package.extractall(target)
-          print('Restored source SHA256 4c9c87bcdaab5fa5c510b17dc068103c2319e4abfa175b320458460634b706de')
+          print('Restored source SHA256 08e80089062f0ed1451f68523041bcd9d9235e1a207e474921f9f5d4db3c193f')
           PY
 
       - name: Test core and build tvOS simulator app
@@ -70,7 +70,7 @@ jobs:
       - name: Keep unsigned device archive
         uses: actions/upload-artifact@v4
         with:
-          name: KinoHD-unsigned-tvOS
+          name: Asan-unsigned-tvOS
           path: project/.build/KinoHD.xcarchive
           if-no-files-found: error
           retention-days: 14
@@ -81,7 +81,7 @@ jobs:
       - name: Keep unsigned IPA
         uses: actions/upload-artifact@v4
         with:
-          name: KinoHD-unsigned-IPA
+          name: Asan-unsigned-IPA
           path: project/artifacts/KinoHD-unsigned.ipa
           if-no-files-found: error
           retention-days: 14
@@ -90,7 +90,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: KinoHD-check-log-${{ github.run_attempt }}
+          name: Asan-check-log-${{ github.run_attempt }}
           path: project/artifacts/*.log
           if-no-files-found: warn
           retention-days: 14
@@ -116,7 +116,7 @@ jobs:
           parts = sorted(pathlib.Path('.transfer').glob('Asan-source.part-*.b64'))
           assert len(parts) == 6, 'Missing source transport part'
           archive = base64.b64decode(''.join(p.read_text().strip() for p in parts), validate=True)
-          assert hashlib.sha256(archive).hexdigest() == '4c9c87bcdaab5fa5c510b17dc068103c2319e4abfa175b320458460634b706de', 'Source digest mismatch'
+          assert hashlib.sha256(archive).hexdigest() == '08e80089062f0ed1451f68523041bcd9d9235e1a207e474921f9f5d4db3c193f', 'Source digest mismatch'
           target = pathlib.Path('project').resolve()
           target.mkdir(exist_ok=False)
           with zipfile.ZipFile(io.BytesIO(archive)) as package:
@@ -126,7 +126,7 @@ jobs:
                   assert dest.is_relative_to(target), 'Unsafe archive path'
                   assert not stat.S_ISLNK(entry.external_attr >> 16), 'Symlink in source archive'
               package.extractall(target)
-          print('Restored source SHA256 4c9c87bcdaab5fa5c510b17dc068103c2319e4abfa175b320458460634b706de')
+          print('Restored source SHA256 08e80089062f0ed1451f68523041bcd9d9235e1a207e474921f9f5d4db3c193f')
           PY
 
       - name: Check Simulator selection
@@ -141,7 +141,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: KinoHD-native-preview
+          name: Asan-native-preview
           path: |
             project/artifacts/preview/
             project/artifacts/preview-capture.log
