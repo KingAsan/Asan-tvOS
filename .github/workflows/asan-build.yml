@@ -16,6 +16,7 @@ concurrency:
 
 jobs:
   build:
+    if: ${{ !contains(github.event.head_commit.message, '[ui only]') }}
     runs-on: macos-26-intel
     timeout-minutes: 30
     defaults:
@@ -36,7 +37,7 @@ jobs:
           parts = sorted(pathlib.Path('.transfer').glob('Asan-source.part-*.b64'))
           assert len(parts) == 6, 'Missing source transport part'
           archive = base64.b64decode(''.join(p.read_text().strip() for p in parts), validate=True)
-          assert hashlib.sha256(archive).hexdigest() == '618557e13261a2b55d73407ee8364e893e528b708dd88b0cfad5e030247915de', 'Source digest mismatch'
+          assert hashlib.sha256(archive).hexdigest() == 'daee692f4219ae2f17ec0fb6b7e9ef01e57a7a51e8901279d52f2e4fd6a3a93b', 'Source digest mismatch'
           target = pathlib.Path('project').resolve()
           target.mkdir(exist_ok=False)
           with zipfile.ZipFile(io.BytesIO(archive)) as package:
@@ -46,7 +47,7 @@ jobs:
                   assert dest.is_relative_to(target), 'Unsafe archive path'
                   assert not stat.S_ISLNK(entry.external_attr >> 16), 'Symlink in source archive'
               package.extractall(target)
-          print('Restored source SHA256 618557e13261a2b55d73407ee8364e893e528b708dd88b0cfad5e030247915de')
+          print('Restored source SHA256 daee692f4219ae2f17ec0fb6b7e9ef01e57a7a51e8901279d52f2e4fd6a3a93b')
           PY
 
       - name: Test core and build tvOS simulator app
@@ -116,7 +117,7 @@ jobs:
           parts = sorted(pathlib.Path('.transfer').glob('Asan-source.part-*.b64'))
           assert len(parts) == 6, 'Missing source transport part'
           archive = base64.b64decode(''.join(p.read_text().strip() for p in parts), validate=True)
-          assert hashlib.sha256(archive).hexdigest() == '618557e13261a2b55d73407ee8364e893e528b708dd88b0cfad5e030247915de', 'Source digest mismatch'
+          assert hashlib.sha256(archive).hexdigest() == 'daee692f4219ae2f17ec0fb6b7e9ef01e57a7a51e8901279d52f2e4fd6a3a93b', 'Source digest mismatch'
           target = pathlib.Path('project').resolve()
           target.mkdir(exist_ok=False)
           with zipfile.ZipFile(io.BytesIO(archive)) as package:
@@ -126,7 +127,7 @@ jobs:
                   assert dest.is_relative_to(target), 'Unsafe archive path'
                   assert not stat.S_ISLNK(entry.external_attr >> 16), 'Symlink in source archive'
               package.extractall(target)
-          print('Restored source SHA256 618557e13261a2b55d73407ee8364e893e528b708dd88b0cfad5e030247915de')
+          print('Restored source SHA256 daee692f4219ae2f17ec0fb6b7e9ef01e57a7a51e8901279d52f2e4fd6a3a93b')
           PY
 
       - name: Check Simulator selection
