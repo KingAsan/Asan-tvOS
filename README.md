@@ -1,34 +1,37 @@
 # Asan · Rezka для Apple TV
 
-**Asan 0.3.0 / build 4 готов к установке через Sideloadly.** Это текущий Asan с красным пиксельным сердцем. Имена KinoHD.xcodeproj, схемы/исполняемого файла KinoHD и bundle ID dev.local.KinoHD оставлены внутри проекта для совместимости обновления.
+**Asan 0.4.0 / build 5 готов к установке через Sideloadly.**
 
-Сворачиваемая системная панель tvOS18+, штатный фокус на постерах, один основной жанр и рейтинг на карточке. Постеры декодируются в фоне до600px; общий кэш, отмена скрытых запросов и ограничение параллелизма сокращают повторную работу. Файловый кэш вынесен из UI, сортировка не повторяется при движении фокуса.
+Графитовый фон, жемчужные акценты, лёгкие полупрозрачные панели и короткие переходы. Сохранены сворачиваемое меню, системный фокус постеров, основной жанр и рейтинг. Одинаковые качества объединены в обоих меню; запасные адреса сохранены отдельно, выбранное качество запоминается.
 
-## Проверка
+Пользовательское имя — **Asan**, иконка — красное пиксельное сердце. Внутренние имена `KinoHD.xcodeproj`, схемы/исполняемого файла `KinoHD` и bundle ID `dev.local.KinoHD` сохранены для обновления установленного приложения.
 
-[Финальный GitHub Actions run41104547915](https://github.com/KingAsan/Asan-tvOS/actions/runs/41104547915) — **Success**:
+## Подтверждённые проверки
 
-- 107 package XCTest, 0 failures.
-- 11 Python packaging tests, OK.
-- tvOS Simulator Debug BUILD SUCCEEDED; device Release arm64 ARCHIVE SUCCEEDED.
-- 7 настоящих tvOS UITests, 0 failures/skips; все15 XCUIScreen PNG просмотрены вручную.
+- [Основное build-задание](https://github.com/KingAsan/Asan-tvOS/actions/runs/41127279643/job/124308955222) — **Success**: 113 package XCTest, 0 failures; 11 Python tests, OK; Simulator BUILD SUCCEEDED; device Release arm64 ARCHIVE SUCCEEDED.
+- [Финальный UI-прогон](https://github.com/KingAsan/Asan-tvOS/actions/runs/41130729493) — **Success**: 11 UITests, 0 failures/skips.
+- Все 18 настоящих XCUIScreen PNG просмотрены вручную. Настоящая H.264-запись переходов проверена по последовательности исходных кадров.
 
-Проверены раскрытие Menu и сворачивание панели, подписи/фокус/жанр/рейтинг, каталог240 карточек, details, озвучки/качества, guest/settings/login, сохранённый каталог при проверке аккаунта, выход Back из AVKit-контейнера.
+Проверены раскрытие/сворачивание панели, focus, жанр/рейтинг, прокрутка 240 карточек, details/Back, озвучки/качества, оба меню без дублей, guest/settings/login, сохранённый каталог при проверке аккаунта и выход Back из AVKit-контейнера. Среда: Apple TV 1080p Simulator, tvOS 26.5, macos-26-intel. Fixtures вымышленные, только DEBUG/Simulator; настоящие Premium/CDN/видео и скорость на физической A1625 не проверялись. Частота записанного VFR-видео не является app FPS.
 
-Среда: Apple TV1080p Simulator tvOS26.5, macos-26-intel. Fixtures вымышленные и только DEBUG/Simulator. Реальное видео/Premium/CDN и FPS/память на физической A1625 этими проверками не измерялись.
+Это облегчённое оформление для Apple TV HD A1625. Настоящий [Liquid Glass в tvOS](https://developer.apple.com/documentation/technologyoverviews/adopting-liquid-glass) поддерживается Apple TV 4K второго поколения и новее.
 
 ## Установка
 
-Скачайте артефакт **Asan-unsigned-IPA** финального run. Внутреннее историческое имя KinoHD-unsigned.ipa; локально предоставлен тот же файл Asan-0.3.0-unsigned.ipa. Размер4498654bytes, SHA256:
+Артефакт `Asan-unsigned-IPA` находится в основном build-run 41127279643. Внутреннее имя `KinoHD-unsigned.ipa`; пользователю передан тот же файл **Asan-0.4.0-unsigned.ipa**.
 
-0dc16142242920153044d868e25bc5c9ab58de282c6e42674cffbb39237ce492
+Размер: **4521027 bytes**. SHA256:
+`52f84f03740bb7c1e7ae967e472e0bcb23f04b6acd5e11443a691c966eb52b7d`.
 
-Выберите IPA в Sideloadly, подпишите тем же Apple Account и установите поверх существующего Asan без удаления. CI не хранит пароль Apple/Rezka, сертификат или provisioning.
+Выберите новый IPA в Sideloadly, подпишите тем же Apple Account и установите поверх Asan без удаления. Пароли Apple/Rezka, сертификат, provisioning и APK в репозиторий не включены.
 
 ## Исходники и воспроизводимость
 
-Репозиторий приватный. Из-за ограничения браузерной загрузки проверенный source ZIP передан шестью Base64-файлами в .transfer/. Workflow .github/workflows/asan-build.yml восстанавливает обычное дерево в project/, проверяет SHA256, ZIP CRC и пути, затем запускает оригинальные скрипты. Разрешение workflow — contents:read.
+Репозиторий приватный. Шесть Base64-файлов `.transfer/` содержат проверенный source ZIP. Workflow `.github/workflows/asan-build.yml` восстанавливает дерево в `project/`, проверяет SHA256, CRC и пути, запускает исходные скрипты; разрешение — `contents:read`.
 
-Проверенный source ZIP:2147982bytes, SHA256 **08e80089062f0ed1451f68523041bcd9d9235e1a207e474921f9f5d4db3c193f**. Source data commit fe27fe990e253bb12f16b6232974defa8c68baed; workflow commit d105a1209d7d3ef0dfb86e5ab91390fe887df262.
+- Device Release ZIP SHA256: `618557e13261a2b55d73407ee8364e893e528b708dd88b0cfad5e030247915de`.
+- Финальный UI ZIP: 2154344 bytes, SHA256 `daee692f4219ae2f17ec0fb6b7e9ef01e57a7a51e8901279d52f2e4fd6a3a93b`. Source commit `1e456f3cbc8b46e68f20a9c0b186ac7efc9b0246`, workflow commit `83aa283e2c04692f0d347e4a5dc38e424efa60de`.
+- App/Sources/Tests/Package.swift/Xcode project побайтово совпадают между успешным Release и финальным UI-прогоном. Исправления повторного прогона затронули только UITests и диагностический скрипт; повторный Release намеренно пропущен.
+- Полный переданный пользователю **Asan-tvOS-0.4.0-source.zip** включает окончательные Markdown-отчёты. Его контрольная сумма указана в локальном delivery JSON; 78 файлов кода/ресурсов/тестов/инструментов совпадают с финальным UI ZIP.
 
-Переданный пользователю полный Asan-tvOS-0.3.0-source.zip содержит обновлённые Markdown-отчёты:2147364bytes, SHA256 **58f960e6a58b658d367100c257e57b80ccec28d1a830b7839aaaea332c55719d**. Все78 файлов кода/ресурсов/тестов/инструментов совпадают с проверенной сборкой. Внутренние отчёты в зафиксированном CI ZIP описывают промежуточное состояние; этот README фиксирует окончательный результат.
+Внутренний VALIDATION в зафиксированном CI ZIP описывает промежуточную проверку. Этот README и полный переданный source ZIP фиксируют окончательный результат двух отдельных прогонов.
