@@ -28,6 +28,18 @@ jobs:
           set -euo pipefail
           mkdir -p artifacts
           bash project/scripts/build-torrent-engine.sh 2>&1 | tee artifacts/native-build.log
+      - name: Verify actual local torrent transfer and deletion
+        shell: bash
+        run: |
+          set -euo pipefail
+          cmake -S project/Native/TorrentBridge -B project/.torrent-build/macos-x86_64 -DASAN_NATIVE_TESTS=ON
+          cmake --build project/.torrent-build/macos-x86_64 --config Release --target AsanTorrentIntegrationTests -- -quiet CODE_SIGNING_ALLOWED=NO
+          ctest --test-dir project/.torrent-build/macos-x86_64 -C Release --output-on-failure 2>&1 | tee artifacts/native-integration.log
+      - uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: project/.torrent-build
+          key: torrent-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('project/Native/**', 'project/scripts/build-torrent-engine.sh') }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:

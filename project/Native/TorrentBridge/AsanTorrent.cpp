@@ -19,6 +19,8 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <sys/stat.h>
+#include <thread>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -91,6 +93,11 @@ struct Entry {
     bool deleteConfirmed = false;
     lt::info_hash_t hashes;
 };
+bool sameTorrent(lt::info_hash_t const& lhs, lt::info_hash_t const& rhs) {
+    // A v1-only magnet may acquire the v2 hash after hybrid metadata arrives.
+    return (lhs.has_v1() && rhs.has_v1() && lhs.v1 == rhs.v1)
+        || (lhs.has_v2() && rhs.has_v2() && lhs.v2 == rhs.v2);
+}
 struct Engine {
     fs::path root;
     std::unique_ptr<lt::session> session;
@@ -109,6 +116,8 @@ struct Engine {
         settings.set_int(lt::settings_pack::alert_mask, static_cast<int>(static_cast<std::uint32_t>(lt::alert_category::error | lt::alert_category::storage | lt::alert_category::status)));
         settings.set_bool(lt::settings_pack::enable_upnp, false);
         settings.set_bool(lt::settings_pack::enable_natpmp, false);
+        settings.set_bool(lt::settings_pack::enable_lsd, false);
+        settings.set_str(lt::settings_pack::listen_interfaces, "0.0.0.0:0,[::]:0");
         session = std::make_unique<lt::session>(lt::session_params(settings));
     }
     Entry& entry(char const* raw) {
@@ -127,7 +136,7 @@ struct Engine {
         session->pop_alerts(&alerts);
         for (auto const* alert : alerts) {
             if (auto const* deleted = lt::alert_cast<lt::torrent_deleted_alert>(alert)) {
-                for (auto& pair : entries) if (pair.second.removing && pair.second.hashes == deleted->info_hashes) pair.second.deleteConfirmed = true;
+                for (auto& pair : entries) if (pair.second.removing && sameTorrent(pair.second.hashes, deleted->info_hashes)) pair.second.deleteConfirmed = true;
             }
         }
     }
@@ -280,7 +289,16 @@ extern "C" char* asan_torrent_command(void* raw, char const* uuid, char const* c
             auto const size = files.file_size(chosen);
             if (size <= 0 || size > maxFileBytes) throw std::runtime_error("Choose a file smaller than 8 GiB");
             if (item.selected >= 0 && item.selected != index) throw std::runtime_error("Remove this download before choosing a different file");
-            if (fs::space(item.directory).available < static_cast<std::uintmax_t>(size) + freeSpaceReserve)
+            // Sparse files advertise the full logical size before downloading.
+            // Credit only allocated filesystem blocks for an existing regular
+            // owned file; never credit persisted UI progress or st_size alone.
+            std::uintmax_t allocatedCredit = 0;
+            auto const selectedPath = item.directory / files.file_path(chosen);
+            struct stat existing{};
+            if (::lstat(selectedPath.c_str(), &existing) == 0 && S_ISREG(existing.st_mode) && existing.st_blocks > 0)
+                allocatedCredit = std::min(static_cast<std::uintmax_t>(size), static_cast<std::uintmax_t>(existing.st_blocks) * 512U);
+            auto const needed = static_cast<std::uintmax_t>(size) - allocatedCredit + freeSpaceReserve;
+            if (fs::space(item.directory).available < needed)
                 throw std::runtime_error("Not enough free space for this download");
             std::vector<lt::download_priority_t> priorities(static_cast<std::size_t>(files.num_files()), lt::dont_download);
             priorities[static_cast<std::size_t>(index)] = lt::default_priority;
@@ -288,7 +306,12 @@ extern "C" char* asan_torrent_command(void* raw, char const* uuid, char const* c
             // A synchronous read is queued after the priority update on the
             // libtorrent session thread; completion additionally checks these
             // priorities in snapshot, so pending disk updates fail closed.
-            auto const applied = item.handle.get_file_priorities();
+            auto const deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+            auto applied = item.handle.get_file_priorities();
+            while (applied != priorities && std::chrono::steady_clock::now() < deadline) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                applied = item.handle.get_file_priorities();
+            }
             if (applied != priorities) throw std::runtime_error("File priorities have not been applied yet");
             item.selected = index;
             item.completedPaused = false;

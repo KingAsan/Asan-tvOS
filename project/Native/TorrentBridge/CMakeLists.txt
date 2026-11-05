@@ -23,6 +23,10 @@ set(Boost_NO_BOOST_CMAKE ON)
 set(Boost_NO_SYSTEM_PATHS ON)
 set(BOOST_ROOT "${ASAN_BOOST_SOURCE}")
 set(BOOST_INCLUDEDIR "${ASAN_BOOST_SOURCE}")
+# Cross-compiling searches the SDK root by default. Boost is architecture-neutral
+# headers kept outside that SDK; supply the proven include directory directly so
+# FindBoost never rewrites it underneath the tvOS sysroot.
+set(Boost_INCLUDE_DIR "${ASAN_BOOST_SOURCE}" CACHE PATH "Pinned Boost headers" FORCE)
 # tvOS disallows writable mmap; CommonCrypto supplies SHA, not TLS transport.
 add_compile_definitions(TORRENT_HAVE_MMAP=0 TORRENT_USE_COMMONCRYPTO=1)
 add_subdirectory("${ASAN_LIBTORRENT_SOURCE}" libtorrent EXCLUDE_FROM_ALL)
@@ -30,3 +34,12 @@ add_library(AsanTorrentBridge STATIC AsanTorrent.cpp)
 target_include_directories(AsanTorrentBridge PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_link_libraries(AsanTorrentBridge PUBLIC torrent-rasterbar)
 set_target_properties(AsanTorrentBridge PROPERTIES XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED NO)
+option(ASAN_NATIVE_TESTS "Build the bounded localhost torrent integration test" OFF)
+if(ASAN_NATIVE_TESTS AND CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+  add_executable(AsanTorrentIntegrationTests tests/integration.cpp)
+  target_link_libraries(AsanTorrentIntegrationTests PRIVATE AsanTorrentBridge)
+  set_target_properties(AsanTorrentIntegrationTests PROPERTIES XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED NO)
+  enable_testing()
+  add_test(NAME native-torrent-local-transfer COMMAND AsanTorrentIntegrationTests)
+  set_tests_properties(native-torrent-local-transfer PROPERTIES TIMEOUT 60)
+endif()
