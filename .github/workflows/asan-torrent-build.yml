@@ -126,3 +126,5 @@ jobs:
         env:
           TORRENT_TEST_OUTCOME: ${{ steps.torrent_transfer.outcome }}
         run: test "$TORRENT_TEST_OUTCOME" = success
+
+# Verify the same source on tvOS while the independent macOS regression probe runs.
