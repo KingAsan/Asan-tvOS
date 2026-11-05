@@ -1,0 +1,98 @@
+name: Asan torrent runtime and storage probe
+on:
+  push:
+    branches: [asan-torrent-mode]
+    paths: ['source/Asan-torrent-patch.zip', '.github/workflows/asan-torrent-mac-probe.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: asan-torrent-mac-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  runtime-and-storage:
+    if: ${{ contains(github.event.head_commit.message, '[mac probe]') }}
+    runs-on: macos-26-intel
+    timeout-minutes: 25
+    defaults:
+      run:
+        shell: bash
+        working-directory: project
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Restore reviewed source
+        working-directory: .
+        run: |
+          python3 - <<'PY'
+          import base64, hashlib, io, json, pathlib, shutil, stat, zipfile
+          parts = sorted(pathlib.Path('.transfer').glob('Asan-source.part-*.b64'))
+          assert len(parts) == 6
+          base = base64.b64decode(''.join(p.read_text().strip() for p in parts), validate=True)
+          assert hashlib.sha256(base).hexdigest() == 'daee692f4219ae2f17ec0fb6b7e9ef01e57a7a51e8901279d52f2e4fd6a3a93b'
+          patch = pathlib.Path('source/Asan-torrent-patch.zip').read_bytes()
+          assert hashlib.sha256(patch).hexdigest() == '9e5b91b7cbb662d3647ad991fb7fcced38053c2d73c115db31903599414e621a'
+          target = pathlib.Path('project').resolve()
+          target.mkdir(exist_ok=True)
+          manifest = None
+          for payload in (base, patch):
+              with zipfile.ZipFile(io.BytesIO(payload)) as archive:
+                  assert archive.testzip() is None
+                  for entry in archive.infolist():
+                      if entry.filename == '.asan-source-manifest.json':
+                          manifest = json.loads(archive.read(entry))
+                          continue
+                      destination = (target / entry.filename).resolve()
+                      assert destination.is_relative_to(target)
+                      assert not stat.S_ISLNK(entry.external_attr >> 16)
+                      archive.extract(entry, target)
+          shutil.copyfile(target/'App/Assets.xcassets/AsanHeart.imageset/heart.png', target/'App/AsanInstallPreview.png')
+          assert manifest
+          for name, expected in manifest.items():
+              actual = (target / name).resolve()
+              assert actual.is_relative_to(target)
+              assert hashlib.sha256(actual.read_bytes()).hexdigest() == expected, name
+          print('Verified exact source manifest: %s files' % len(manifest))
+          PY
+      - uses: actions/cache@v4
+        with:
+          path: project/.torrent-build
+          key: torrent-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('project/Native/**', 'project/scripts/build-torrent-engine.sh') }}
+          restore-keys: torrent-v1-${{ runner.os }}-${{ runner.arch }}-
+      - name: Build actual macOS native slice
+        env:
+          ASAN_TORRENT_SLICES: macos
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          bash scripts/build-torrent-engine.sh 2>&1 | tee artifacts/torrent-native-build.log
+      - name: Run actual metadata, transfer and deletion test
+        id: runtime_test
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          cmake -S Native/TorrentBridge -B .torrent-build/macos-x86_64 -DASAN_NATIVE_TESTS=ON
+          cmake --build .torrent-build/macos-x86_64 --config Release --target AsanTorrentIntegrationTests -- -quiet CODE_SIGNING_ALLOWED=NO
+          ctest --test-dir .torrent-build/macos-x86_64 -C Release --output-on-failure 2>&1 | tee artifacts/torrent-integration.log
+      - name: Test Swift policies and real filesystem storage
+        run: |
+          set -euo pipefail
+          xcrun swift test 2>&1 | tee artifacts/check-macos.log
+      - uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: project/.torrent-build
+          key: torrent-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('project/Native/**', 'project/scripts/build-torrent-engine.sh') }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Asan-0.5-mac-probe-diagnostics
+          path: project/artifacts/*.log
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Require successful real torrent test
+        if: always()
+        env:
+          TORRENT_TEST_OUTCOME: ${{ steps.runtime_test.outcome }}
+        run: test "$TORRENT_TEST_OUTCOME" = success

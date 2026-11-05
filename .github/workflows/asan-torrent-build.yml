@@ -11,6 +11,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   build-and-verify:
+    if: ${{ !contains(github.event.head_commit.message, '[mac probe]') }}
     runs-on: macos-26-intel
     timeout-minutes: 65
     defaults:
@@ -31,7 +32,7 @@ jobs:
           base = base64.b64decode(''.join(p.read_text().strip() for p in parts), validate=True)
           assert hashlib.sha256(base).hexdigest() == 'daee692f4219ae2f17ec0fb6b7e9ef01e57a7a51e8901279d52f2e4fd6a3a93b'
           patch = pathlib.Path('source/Asan-torrent-patch.zip').read_bytes()
-          assert hashlib.sha256(patch).hexdigest() == '4fed5bf25d511006982d0ecc7c1b436f7f927bb9d95d68d2df56d6d2eadf77c7'
+          assert hashlib.sha256(patch).hexdigest() == '9e5b91b7cbb662d3647ad991fb7fcced38053c2d73c115db31903599414e621a'
           target = pathlib.Path('project').resolve()
           target.mkdir(exist_ok=True)
           manifest = None
@@ -70,7 +71,7 @@ jobs:
           python3 scripts/prepare-tvos-vlc.py 2>&1 | tee artifacts/vlc-prepare.log
           swift scripts/make-torrent-preview.swift App/PreviewClip.mp4 2>&1 | tee artifacts/preview-clip.log
       - name: Test actual torrent transfer, verification and deletion
-        id: torrent-transfer
+        id: torrent_transfer
         continue-on-error: true
         run: |
           set -euo pipefail
@@ -123,5 +124,5 @@ jobs:
       - name: Require successful native integration
         if: always()
         env:
-          TORRENT_TEST_OUTCOME: ${{ steps.torrent-transfer.outcome }}
+          TORRENT_TEST_OUTCOME: ${{ steps.torrent_transfer.outcome }}
         run: test "$TORRENT_TEST_OUTCOME" = success
