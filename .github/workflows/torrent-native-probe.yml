@@ -1,0 +1,39 @@
+name: Asan embedded torrent native probe
+on:
+  push:
+    branches: [asan-torrent-mode]
+    paths: ['project/Native/**', 'project/scripts/build-torrent-engine.sh', '.github/workflows/torrent-native-probe.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: torrent-native-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  native:
+    runs-on: macos-26-intel
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/cache@v4
+        with:
+          path: project/.torrent-build
+          key: torrent-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('project/Native/**', 'project/scripts/build-torrent-engine.sh') }}
+          restore-keys: torrent-v1-${{ runner.os }}-${{ runner.arch }}-
+      - name: Build real torrent engine from pinned sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          bash project/scripts/build-torrent-engine.sh 2>&1 | tee artifacts/native-build.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Asan-torrent-native-probe
+          path: |
+            artifacts/
+            project/Vendor/AsanTorrent.xcframework/
+          if-no-files-found: error
+          retention-days: 7
