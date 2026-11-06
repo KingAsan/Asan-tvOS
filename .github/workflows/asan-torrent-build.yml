@@ -126,3 +126,5 @@ jobs:
         env:
           TORRENT_TEST_OUTCOME: ${{ steps.torrent_transfer.outcome }}
         run: test "$TORRENT_TEST_OUTCOME" = success
+
+# Validate the same pinned source on Simulator and Apple TV device in parallel with the macOS probe.
