@@ -1,7 +1,7 @@
 name: Asan torrent runtime and storage probe
 on:
   push:
-    branches: [asan-torrent-mode]
+    branches: [asan-film-torrents-intro]
     paths: ['source/Asan-torrent-patch.zip', '.github/workflows/asan-torrent-mac-probe.yml']
   workflow_dispatch:
 permissions:
@@ -32,7 +32,7 @@ jobs:
           base = base64.b64decode(''.join(p.read_text().strip() for p in parts), validate=True)
           assert hashlib.sha256(base).hexdigest() == 'daee692f4219ae2f17ec0fb6b7e9ef01e57a7a51e8901279d52f2e4fd6a3a93b'
           patch = pathlib.Path('source/Asan-torrent-patch.zip').read_bytes()
-          assert hashlib.sha256(patch).hexdigest() == 'dfddba6120ea1647d990d98abfffbfef83ff48864fa2665297d5df2900f705a0'
+          assert hashlib.sha256(patch).hexdigest() == 'ef9438bceef5e8769e14eb84df9dabc20e6632f2fd3b40d4d67f8a4682b96fb7'
           target = pathlib.Path('project').resolve()
           target.mkdir(exist_ok=True)
           manifest = None
@@ -88,7 +88,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: Asan-0.5-mac-probe-diagnostics
+          name: Asan-0.6-mac-probe-diagnostics
           path: project/artifacts/*.log
           if-no-files-found: warn
           retention-days: 7
