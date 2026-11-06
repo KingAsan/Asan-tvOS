@@ -1,7 +1,7 @@
 name: Asan torrent runtime and storage probe
 on:
   push:
-    branches: [asan-torrent-mode]
+    branches: [asan-torrent-native-reconnect]
     paths: ['source/Asan-torrent-patch.zip', '.github/workflows/asan-torrent-mac-probe.yml']
   workflow_dispatch:
 permissions:
@@ -32,7 +32,7 @@ jobs:
           base = base64.b64decode(''.join(p.read_text().strip() for p in parts), validate=True)
           assert hashlib.sha256(base).hexdigest() == 'daee692f4219ae2f17ec0fb6b7e9ef01e57a7a51e8901279d52f2e4fd6a3a93b'
           patch = pathlib.Path('source/Asan-torrent-patch.zip').read_bytes()
-          assert hashlib.sha256(patch).hexdigest() == '7d38fca0d9435483af1db803dfee8c6029c1fa53bb0edb6ce21d59f6b891e585'
+          assert hashlib.sha256(patch).hexdigest() == '4b83833b94c8675c3640d08660460c80e686d4773216033b41ecca8268d53a51'
           target = pathlib.Path('project').resolve()
           target.mkdir(exist_ok=True)
           manifest = None
