@@ -32,7 +32,7 @@ jobs:
           base = base64.b64decode(''.join(p.read_text().strip() for p in parts), validate=True)
           assert hashlib.sha256(base).hexdigest() == 'daee692f4219ae2f17ec0fb6b7e9ef01e57a7a51e8901279d52f2e4fd6a3a93b'
           patch = pathlib.Path('source/Asan-torrent-patch.zip').read_bytes()
-          assert hashlib.sha256(patch).hexdigest() == '625fdbfe096fd9a6615c990f2fd76fe510bc5d84ff45a74a0b371774c041f794'
+          assert hashlib.sha256(patch).hexdigest() == '7d38fca0d9435483af1db803dfee8c6029c1fa53bb0edb6ce21d59f6b891e585'
           target = pathlib.Path('project').resolve()
           target.mkdir(exist_ok=True)
           manifest = None
@@ -74,7 +74,8 @@ jobs:
           set -euo pipefail
           cmake -S Native/TorrentBridge -B .torrent-build/macos-x86_64 -DASAN_NATIVE_TESTS=ON
           cmake --build .torrent-build/macos-x86_64 --config Release --target AsanTorrentIntegrationTests -- -quiet CODE_SIGNING_ALLOWED=NO
-          ctest --test-dir .torrent-build/macos-x86_64 -C Release --output-on-failure 2>&1 | tee artifacts/torrent-integration.log
+          ctest --test-dir .torrent-build/macos-x86_64 -C Release -R '^native-torrent-local-transfer$' --repeat until-fail:3 --verbose 2>&1 | tee artifacts/torrent-integration.log
+          ctest --test-dir .torrent-build/macos-x86_64 -C Release -R '^native-torrent-pause-before-metadata$' --verbose 2>&1 | tee -a artifacts/torrent-integration.log
       - name: Test Swift policies and real filesystem storage
         run: |
           set -euo pipefail
