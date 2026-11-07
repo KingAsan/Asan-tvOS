@@ -1,4 +1,4 @@
-name: Asan 0.6 film torrent search and dark intro
+name: Asan 0.7 cinematic library and episode queue
 on:
   push:
     branches: [asan-film-torrents-intro]
@@ -32,7 +32,7 @@ jobs:
           base = base64.b64decode(''.join(p.read_text().strip() for p in parts), validate=True)
           assert hashlib.sha256(base).hexdigest() == 'daee692f4219ae2f17ec0fb6b7e9ef01e57a7a51e8901279d52f2e4fd6a3a93b'
           patch = pathlib.Path('source/Asan-torrent-patch.zip').read_bytes()
-          assert hashlib.sha256(patch).hexdigest() == 'ef9438bceef5e8769e14eb84df9dabc20e6632f2fd3b40d4d67f8a4682b96fb7'
+          assert hashlib.sha256(patch).hexdigest() == 'c16cd0c0872e1dc66b8c4fd06bb7c734e1749e0df258716bedc034ee5bd21a77'
           target = pathlib.Path('project').resolve()
           target.mkdir(exist_ok=True)
           manifest = None
@@ -110,14 +110,14 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: Asan-0.6-diagnostics
+          name: Asan-0.7-diagnostics
           path: project/artifacts/*.log
           if-no-files-found: warn
           retention-days: 14
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: Asan-0.6-native-preview
+          name: Asan-0.7-native-preview
           path: |
             project/artifacts/preview/
             project/.build/Asan-UI.xcresult/
@@ -126,7 +126,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: ${{ always() && steps.device_archive.outcome == 'success' }}
         with:
-          name: Asan-0.6-device-IPA
+          name: Asan-0.7-device-IPA
           path: project/artifacts/KinoHD-unsigned.ipa
           if-no-files-found: error
           retention-days: 14
