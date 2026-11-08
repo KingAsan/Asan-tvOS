@@ -32,7 +32,7 @@ jobs:
           base = base64.b64decode(''.join(p.read_text().strip() for p in parts), validate=True)
           assert hashlib.sha256(base).hexdigest() == 'daee692f4219ae2f17ec0fb6b7e9ef01e57a7a51e8901279d52f2e4fd6a3a93b'
           patch = pathlib.Path('source/Asan-torrent-patch.zip').read_bytes()
-          assert hashlib.sha256(patch).hexdigest() == 'e805656a2b0504db1c8cad2176a07ff59202326b01bd5ffc7c91f295b923e2e2'
+          assert hashlib.sha256(patch).hexdigest() == '9d54ecb19a3014ebed66920118cc67dc376668ff9662f1d9f1905d2977d3a2b1'
           target = pathlib.Path('project').resolve()
           target.mkdir(exist_ok=True)
           manifest = None
@@ -90,6 +90,10 @@ jobs:
         run: |
           set -euo pipefail
           xcrun swift test --filter TorrentSearchTests.testLivePublicSearchOnlyWhenExplicitlyEnabled 2>&1 | tee artifacts/torrent-live-search.log
+      - name: Check focus, navigation and actual native screenshots
+        run: |
+          set -euo pipefail
+          python3 scripts/capture-tvos-preview.py --preflight-first 2>&1 | tee artifacts/preview-capture.log
       - name: Archive Apple TV device app
         id: device_archive
         run: |
@@ -98,10 +102,6 @@ jobs:
             -sdk appletvos -destination 'generic/platform=tvOS' -archivePath .build/KinoHD.xcarchive \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY= 2>&1 | tee artifacts/device-archive.log
           python3 scripts/package-unsigned-ipa.py 2>&1 | tee artifacts/package-ipa.log
-      - name: Check focus, navigation and actual native screenshots
-        run: |
-          set -euo pipefail
-          python3 scripts/capture-tvos-preview.py --preflight-first 2>&1 | tee artifacts/preview-capture.log
       - uses: actions/cache/save@v4
         if: always()
         with:
@@ -122,6 +122,7 @@ jobs:
             project/artifacts/preview/
             project/.build/Asan-UI.xcresult/
             project/.build/Asan-UI-preflight.xcresult/
+            project/.build/Asan-UI-preflight-*/
           if-no-files-found: warn
           retention-days: 14
       - uses: actions/upload-artifact@v4
