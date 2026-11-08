@@ -32,7 +32,7 @@ jobs:
           base = base64.b64decode(''.join(p.read_text().strip() for p in parts), validate=True)
           assert hashlib.sha256(base).hexdigest() == 'daee692f4219ae2f17ec0fb6b7e9ef01e57a7a51e8901279d52f2e4fd6a3a93b'
           patch = pathlib.Path('source/Asan-torrent-patch.zip').read_bytes()
-          assert hashlib.sha256(patch).hexdigest() == '7ccf39b1dd0b002dd9cb9bb0f0a98bd006d8c50870359902079956e4f96ed83e'
+          assert hashlib.sha256(patch).hexdigest() == '2e27eff27431112a183e4f4771dd691fe28dff4085b19fa24320e42ff2e636c7'
           target = pathlib.Path('project').resolve()
           target.mkdir(exist_ok=True)
           manifest = None
@@ -58,8 +58,10 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: project/.torrent-build
-          key: torrent-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('project/Native/**', 'project/scripts/build-torrent-engine.sh') }}
-          restore-keys: torrent-v1-${{ runner.os }}-${{ runner.arch }}-
+          key: torrent-v2-macos-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('project/Native/**', 'project/scripts/build-torrent-engine.sh') }}
+          restore-keys: |
+            torrent-v2-macos-${{ runner.os }}-${{ runner.arch }}-
+            torrent-v1-${{ runner.os }}-${{ runner.arch }}-
       - name: Build actual macOS native slice
         env:
           ASAN_TORRENT_SLICES: macos
@@ -84,7 +86,7 @@ jobs:
         if: always()
         with:
           path: project/.torrent-build
-          key: torrent-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('project/Native/**', 'project/scripts/build-torrent-engine.sh') }}
+          key: torrent-v2-macos-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('project/Native/**', 'project/scripts/build-torrent-engine.sh') }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:
