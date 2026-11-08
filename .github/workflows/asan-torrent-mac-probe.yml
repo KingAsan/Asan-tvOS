@@ -32,7 +32,7 @@ jobs:
           base = base64.b64decode(''.join(p.read_text().strip() for p in parts), validate=True)
           assert hashlib.sha256(base).hexdigest() == 'daee692f4219ae2f17ec0fb6b7e9ef01e57a7a51e8901279d52f2e4fd6a3a93b'
           patch = pathlib.Path('source/Asan-torrent-patch.zip').read_bytes()
-          assert hashlib.sha256(patch).hexdigest() == '98ca1a4e8beec03ec6365da1cbbba8459001a4d7499c4a1a2f3bfe5853ef0762'
+          assert hashlib.sha256(patch).hexdigest() == '7ccf39b1dd0b002dd9cb9bb0f0a98bd006d8c50870359902079956e4f96ed83e'
           target = pathlib.Path('project').resolve()
           target.mkdir(exist_ok=True)
           manifest = None
