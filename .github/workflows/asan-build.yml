@@ -2,7 +2,7 @@ name: Asan 0.7 cinematic library and episode queue
 on:
   push:
     branches: [asan-film-torrents-intro]
-    paths: ['source/Asan-torrent-patch.zip', '.github/workflows/asan-torrent-build.yml']
+    paths: ['source/Asan-torrent-patch.zip', '.github/workflows/asan-build.yml']
   workflow_dispatch:
 permissions:
   contents: read
