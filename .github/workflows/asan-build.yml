@@ -32,7 +32,7 @@ jobs:
           base = base64.b64decode(''.join(p.read_text().strip() for p in parts), validate=True)
           assert hashlib.sha256(base).hexdigest() == 'daee692f4219ae2f17ec0fb6b7e9ef01e57a7a51e8901279d52f2e4fd6a3a93b'
           patch = pathlib.Path('source/Asan-torrent-patch.zip').read_bytes()
-          assert hashlib.sha256(patch).hexdigest() == '126881f68ff8ca83998f5a14f2ffa4f01efc2d88fde2d56a0a92326f096a2428'
+          assert hashlib.sha256(patch).hexdigest() == 'b3af0cc7ec035c9425188aecd3b41b35f250bda4c56b9fef12789caf820743dc'
           target = pathlib.Path('project').resolve()
           target.mkdir(exist_ok=True)
           manifest = None
@@ -95,7 +95,7 @@ jobs:
       - name: Check focus, navigation and actual native screenshots
         run: |
           set -euo pipefail
-          python3 scripts/capture-tvos-preview.py --preflight-first 2>&1 | tee artifacts/preview-capture.log
+          python3 scripts/capture-tvos-preview.py --isolated-all 2>&1 | tee artifacts/preview-capture.log
       - name: Archive Apple TV device app
         id: device_archive
         run: |
@@ -125,6 +125,7 @@ jobs:
             project/.build/Asan-UI.xcresult/
             project/.build/Asan-UI-preflight.xcresult/
             project/.build/Asan-UI-preflight-*/
+            project/.build/Asan-UI-case-*/
           if-no-files-found: warn
           retention-days: 14
       - uses: actions/upload-artifact@v4
