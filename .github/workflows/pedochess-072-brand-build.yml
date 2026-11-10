@@ -1,0 +1,117 @@
+name: PedoChess 0.7.2 branding and Apple TV IPA
+on:
+  push:
+    branches: [pedochess-branding]
+    paths: ['source/pedochess-072/**', '.github/workflows/pedochess-072-brand-build.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: pedochess-branding-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  branding-and-device:
+    runs-on: macos-26-intel
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash
+        working-directory: project
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Restore reviewed source
+        working-directory: .
+        run: |
+          python3 - <<'PY'
+          import base64, hashlib, io, pathlib, stat, zipfile
+          parts = sorted(pathlib.Path('source/pedochess-072').glob('part-*.b64'))
+          assert [p.name for p in parts] == [f'part-{i:02d}.b64' for i in range(7)]
+          source = base64.b64decode(''.join(p.read_text(encoding='ascii').strip() for p in parts), validate=True)
+          assert len(source) == 4652445
+          assert hashlib.sha256(source).hexdigest() == '79830c8ddd6face7336c1b27b906da8c81954cfc6a6e0572335b5c5b65b27e65'
+          target = pathlib.Path('project').resolve()
+          target.mkdir(exist_ok=True)
+          with zipfile.ZipFile(io.BytesIO(source)) as archive:
+              assert archive.testzip() is None
+              entries = archive.infolist()
+              assert len(entries) == 143
+              assert sum(e.file_size for e in entries) < 100_000_000
+              seen = set()
+              for entry in entries:
+                  name = entry.filename
+                  assert name and '\\' not in name and not name.startswith('/')
+                  assert not {'..', ''}.intersection(name.split('/'))
+                  assert name.casefold() not in seen
+                  seen.add(name.casefold())
+                  destination = (target / name).resolve()
+                  assert destination.is_relative_to(target)
+                  mode = entry.external_attr >> 16
+                  assert stat.S_ISREG(mode) and not stat.S_ISLNK(mode)
+              archive.extractall(target)
+          print('Restored reviewed 143-file PedoChess source SHA256 79830c8ddd6face7336c1b27b906da8c81954cfc6a6e0572335b5c5b65b27e65')
+          PY
+      - uses: actions/cache@v4
+        with:
+          path: project/.torrent-build
+          key: torrent-v2-all-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('project/Native/**', 'project/scripts/build-torrent-engine.sh') }}
+          restore-keys: |
+            torrent-v2-all-${{ runner.os }}-${{ runner.arch }}-
+            torrent-v1-${{ runner.os }}-${{ runner.arch }}-
+      - name: Build exact embedded native runtime
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          bash scripts/build-torrent-engine.sh 2>&1 | tee artifacts/torrent-native-build.log
+      - name: Prepare official VLC and local test clip
+        run: |
+          set -euo pipefail
+          python3 scripts/prepare-tvos-vlc.py 2>&1 | tee artifacts/vlc-prepare.log
+          swift scripts/make-torrent-preview.swift App/PreviewClip.mp4 2>&1 | tee artifacts/preview-clip.log
+      - name: Verify packaging and capture guards
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s scripts/tests -p 'test_*.py' -v 2>&1 | tee artifacts/packaging-tests.log
+      - name: Check five native branding scenarios and actual intro
+        id: branding_ui
+        run: |
+          set -euo pipefail
+          python3 scripts/capture-tvos-preview.py --branding-only 2>&1 | tee artifacts/branding-capture.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: PedoChess-0.7.2-branding-preview
+          path: |
+            project/artifacts/preview/
+            project/.build/Asan-UI.xcresult/
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Archive Apple TV device app
+        id: device_archive
+        run: |
+          set -euo pipefail
+          xcodebuild archive -project KinoHD.xcodeproj -scheme KinoHD -configuration Release \
+            -sdk appletvos -destination 'generic/platform=tvOS' -archivePath .build/KinoHD.xcarchive \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY= 2>&1 | tee artifacts/device-archive.log
+          python3 scripts/package-unsigned-ipa.py .build/KinoHD.xcarchive artifacts/PedoChess-0.7.2-unsigned.ipa 2>&1 | tee artifacts/package-ipa.log
+      - uses: actions/upload-artifact@v4
+        if: ${{ always() && steps.device_archive.outcome == 'success' }}
+        with:
+          name: PedoChess-0.7.2-device-IPA
+          path: project/artifacts/PedoChess-0.7.2-unsigned.ipa
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: PedoChess-0.7.2-diagnostics
+          path: project/artifacts/*.log
+          if-no-files-found: warn
+          retention-days: 14
+      - uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: project/.torrent-build
+          key: torrent-v2-all-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('project/Native/**', 'project/scripts/build-torrent-engine.sh') }}
