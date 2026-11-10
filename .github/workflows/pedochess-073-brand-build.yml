@@ -29,8 +29,8 @@ jobs:
           parts = sorted(pathlib.Path('source/pedochess-073').glob('part-*.b64'))
           assert [p.name for p in parts] == [f'part-{i:02d}.b64' for i in range(7)]
           source = base64.b64decode(''.join(p.read_text(encoding='ascii').strip() for p in parts), validate=True)
-          assert len(source) == 4422817
-          assert hashlib.sha256(source).hexdigest() == 'e579eb7dee47f08a2b857651ef49cb6b6d91c130d0fc172b05aa8196bf6ff07e'
+          assert len(source) == 4424300
+          assert hashlib.sha256(source).hexdigest() == '4298fa1d2fc1004ddf94fd812d305c87a62571c1e447deb1b63767aacce9fdc0'
           target = pathlib.Path('project').resolve()
           target.mkdir(exist_ok=True)
           with zipfile.ZipFile(io.BytesIO(source)) as archive:
@@ -50,7 +50,7 @@ jobs:
                   mode = entry.external_attr >> 16
                   assert stat.S_ISREG(mode) and not stat.S_ISLNK(mode)
               archive.extractall(target)
-          print('Restored reviewed 143-file PedoChess source SHA256 e579eb7dee47f08a2b857651ef49cb6b6d91c130d0fc172b05aa8196bf6ff07e')
+          print('Restored reviewed 143-file PedoChess source SHA256 4298fa1d2fc1004ddf94fd812d305c87a62571c1e447deb1b63767aacce9fdc0')
           PY
       - uses: actions/cache@v4
         with:
